@@ -224,7 +224,8 @@ package-macos-release: ## 使用 fastforge 打包 macOS release (DMG)
 	@echo "🍎 打包 macOS release (DMG)..."
 	@bash third/fjs/tool/build_runtime.sh
 	@bash third/fvp/macos/setup.sh
-	@fvm exec fastforge release --name release --jobs macos-dmg
+	@bash third/depth-native/prepare-product-macos.sh
+	@fvm exec fastforge release --name release --jobs macos-dmg --skip-clean
 	@echo "✅ macOS DMG 打包完成"
 
 package-windows-release: ## 使用 fastforge 打包 Windows release (EXE)
