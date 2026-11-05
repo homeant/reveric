@@ -4,8 +4,10 @@
 //   lib/shared/models/image/channels.dart
 //   lib/shared/services/ai/image/client.dart
 //   lib/shared/services/ai/codex/image_client.dart
+// ignore_for_file: prefer_initializing_formals
 import 'dart:async';
 import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:http/http.dart' as http;
 
@@ -18,6 +20,7 @@ import 'image/ark.dart';
 import 'image/atlascloud.dart';
 import 'image/client.dart';
 import 'image/codex.dart';
+import 'image/codex_cli.dart';
 import 'image/gemini.dart';
 import 'image/openai.dart';
 import 'image/openrouter.dart';
@@ -202,6 +205,7 @@ class AiImageGenerationService {
       _config,
       clientFactory: _codexImageClientFactory,
     ),
+    ImageProtocol.codex_cli_image => CodexCliImageClient(_config),
     ImageProtocol.gemini_image => GeminiImageClient(_config),
     null => null,
   };

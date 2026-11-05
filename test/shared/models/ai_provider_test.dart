@@ -5,6 +5,8 @@
 //   lib/shared/models/production/image_request.dart
 //   lib/shared/models/audio/request.dart
 
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reveric/shared/models/provider_brand.dart';
 import 'package:reveric/shared/models/ai_provider.dart';
@@ -305,6 +307,22 @@ void main() {
     expect(provider.enableValidationMessage, isNull);
     expect(provider.effectiveBaseUrl, 'https://chatgpt.com/backend-api/codex');
     expect(provider.supportsModelKind(AiModelKind.image), true);
+  });
+  test('Codex CLI provider needs no API key or Base URL on macOS', () {
+    final provider = aiProviderBuiltinById('openai')!.copyWith(
+      id: 'local-codex-cli',
+      type: AiProviderType.codex_cli.name,
+      apiKey: '',
+      baseUrl: '',
+      enabled: true,
+      models: ['gpt-6-luna'],
+      imageModels: ['gpt-image-2'],
+    );
+    expect(provider.hasCredentialConfiguration, Platform.isMacOS);
+    expect(provider.hasBaseUrl, true);
+    expect(provider.supportsModelKind(AiModelKind.chat), true);
+    expect(provider.supportsModelKind(AiModelKind.image), true);
+    expect(provider.isValid, Platform.isMacOS);
   });
   test(
     'removing a preset clears model defaults and edits do not restore it',

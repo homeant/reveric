@@ -272,10 +272,14 @@ void main() {
         caps.validateReferences(caps.minReferences);
         caps.validateReferences(caps.maxReferences);
         expect(() => caps.validateReferences(-1), throwsFormatException);
-        expect(
-          () => caps.validateReferences(caps.maxReferences + 1),
-          throwsFormatException,
-        );
+        if (caps.unlimitedReferences) {
+          caps.validateReferences(caps.maxReferences + 1);
+        } else {
+          expect(
+            () => caps.validateReferences(caps.maxReferences + 1),
+            throwsFormatException,
+          );
+        }
       }
     });
   }

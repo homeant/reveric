@@ -71,6 +71,10 @@ void main() {
           providerTypePickerTypes(),
           contains(AiProviderType.qwen_token_plan),
         );
+        expect(
+          providerTypePickerTypes().contains(AiProviderType.codex_cli),
+          platform == TargetPlatform.macOS,
+        );
         final launched = <String>[];
         const channel = MethodChannel('plugins.flutter.io/url_launcher');
         tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(

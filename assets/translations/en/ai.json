@@ -292,6 +292,7 @@
   "ai.image_generated": "Image Generated",
   "ai.image_generation_failed": "Image generation failed",
   "ai.codex_image_auth_failed": "Could not use your local Codex login. Sign in to Codex again and retry.",
+  "ai.codex_cli_missing": "Codex CLI was not found. Install Codex CLI and retry.",
   "ai.codex_image_needs_chat_model": "Add at least one chat model to this Codex provider before generating images.",
   "ai.generate_cover": "Generate Cover",
   "ai.no_image_model_configured": "No image model configured. Please add an image model in AI settings.",

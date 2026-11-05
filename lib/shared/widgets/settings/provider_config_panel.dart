@@ -47,6 +47,7 @@ import '../../models/image/channels.dart';
 import '../../models/audio/channels.dart';
 import '../../models/video/channels.dart';
 import '../../agent/client/codex_client.dart';
+import '../../agent/client/codex_cli_client.dart';
 import '../../services/ai/codex/credentials.dart';
 import '../../providers/settings_providers.dart';
 import '../../theme/theme.dart';
@@ -58,6 +59,7 @@ import 'provider_audio_models.dart';
 import 'provider_draft.dart';
 import 'proxy_settings_section.dart';
 import 'codex_connection.dart';
+import 'codex_cli_connection.dart';
 import '../../components/reveric_dialog.dart';
 import '../../components/reveric_button.dart';
 
@@ -440,13 +442,13 @@ class ProviderConfigForm extends HookWidget {
           showCapabilities: onChangeType == null,
         ),
         const SizedBox(height: RevericSpacing.x4l),
-        if (config.hasFixedBaseUrl)
+        if (!config.isCodexCli && config.hasFixedBaseUrl)
           _buildReadOnlyField(
             context: context,
             label: context.t(LocaleKeys.settingsAiBaseUrl),
             value: config.effectiveBaseUrl,
           )
-        else
+        else if (!config.isCodexCli)
           ValueListenableBuilder<TextEditingValue>(
             valueListenable: baseUrlController,
             builder: (context, value, _) {
@@ -472,7 +474,7 @@ class ProviderConfigForm extends HookWidget {
               );
             },
           ),
-        if (!config.hasBaseUrl) ...[
+        if (!config.isCodexCli && !config.hasBaseUrl) ...[
           const SizedBox(height: RevericSpacing.xs),
           Text(
             context.t(LocaleKeys.settingsProviderConfigNeedBaseUrl),
@@ -482,6 +484,8 @@ class ProviderConfigForm extends HookWidget {
         const SizedBox(height: RevericSpacing.lg),
         if (config.isCodex)
           CodexConnection(config: config)
+        else if (config.isCodexCli)
+          const CodexCliConnection()
         else
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -498,7 +502,7 @@ class ProviderConfigForm extends HookWidget {
               ),
             ],
           ),
-        if (!config.isCodex && !config.hasApiKey) ...[
+        if (!config.usesCodexLogin && !config.hasApiKey) ...[
           const SizedBox(height: RevericSpacing.xs),
           Text(
             context.t(LocaleKeys.settingsProviderConfigNeedApiKey),
@@ -570,7 +574,8 @@ class ProviderConfigForm extends HookWidget {
             ),
           ),
         ],
-        if (!config.isCodex && config.supportsModelKind(AiModelKind.chat)) ...[
+        if (!config.usesCodexLogin &&
+            config.supportsModelKind(AiModelKind.chat)) ...[
           const SizedBox(height: RevericSpacing.lg),
           _buildSliderField(
             context: context,
@@ -587,16 +592,17 @@ class ProviderConfigForm extends HookWidget {
           _AssetCredentialsSection(config: config, onChanged: onChanged),
         ],
         const SizedBox(height: RevericSpacing.lg),
-        _ProxySection(
-          urlController: proxyUrlController,
-          usernameController: proxyUsernameController,
-          passwordController: proxyPasswordController,
-          onChanged: () => saveConfig(
-            proxyUrl: proxyUrlController.text,
-            proxyUsername: proxyUsernameController.text,
-            proxyPassword: proxyPasswordController.text,
+        if (!config.isCodexCli)
+          _ProxySection(
+            urlController: proxyUrlController,
+            usernameController: proxyUsernameController,
+            passwordController: proxyPasswordController,
+            onChanged: () => saveConfig(
+              proxyUrl: proxyUrlController.text,
+              proxyUsername: proxyUsernameController.text,
+              proxyPassword: proxyPasswordController.text,
+            ),
           ),
-        ),
       ],
     );
   }
@@ -822,11 +828,14 @@ Future<List<String>> fetchProviderModels(
   if (kind == AiModelKind.video) {
     return videoModelsForProvider(config.type);
   }
-  if (config.isCodex && kind == AiModelKind.image) {
+  if (config.usesCodexLogin && kind == AiModelKind.image) {
     return codexPresetImageModels;
   }
   if (config.typeEnum == AiProviderType.minimax && kind == AiModelKind.chat) {
     return minimaxPresetChatModels;
+  }
+  if (config.isCodexCli) {
+    return CodexCliClient.fetchModels();
   }
   // 有预设清单的渠道直接使用清单；其余渠道从接口拉取。
   final imagePresets = kind == AiModelKind.image

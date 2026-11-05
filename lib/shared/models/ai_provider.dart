@@ -18,6 +18,7 @@ import '../../third/form/flutter_hook_form.dart';
 import '../database/app_database.dart';
 import '../localization/locale_keys.dart';
 import '../services/ai/codex/credentials.dart';
+import '../services/ai/codex_cli/app_server.dart';
 import '../services/proxy_client.dart';
 import 'models_catalog.dart';
 import 'audio/channels.dart';
@@ -32,6 +33,7 @@ export '../database/app_database.dart'
 enum AiProviderType {
   openai,
   codex,
+  codex_cli,
   openai_compatible,
   api88,
   ooki,
@@ -122,6 +124,12 @@ const Map<AiProviderType, AiProviderTypeConfig> aiProviderTypeConfigs = {
     textModelKinds: _chatOnlyKinds,
     imageProtocol: ImageProtocol.codex_image,
     fixedBaseUrl: true,
+  ),
+  AiProviderType.codex_cli: AiProviderTypeConfig(
+    displayName: 'Codex CLI',
+    modelIdSource: ModelIdSource.registered,
+    textModelKinds: _chatOnlyKinds,
+    imageProtocol: ImageProtocol.codex_cli_image,
   ),
   AiProviderType.openai_compatible: AiProviderTypeConfig(
     displayName: 'OpenAI Compatible',
@@ -630,16 +638,24 @@ extension AiProviderX on AiProvider {
 
   bool get isCodex => type == AiProviderType.codex.name;
 
-  bool get isPlatformSupported =>
-      !isCodex || CodexCredentials.supportedPlatform;
+  bool get isCodexCli => type == AiProviderType.codex_cli.name;
+
+  bool get usesCodexLogin => isCodex || isCodexCli;
+
+  bool get isPlatformSupported => isCodexCli
+      ? CodexAppServer.supportedPlatform
+      : !isCodex || CodexCredentials.supportedPlatform;
 
   /// 本机认证在每次请求前读取；配置校验只检查平台与必填设置。
-  bool get hasCredentialConfiguration =>
-      isCodex ? CodexCredentials.supportedPlatform : hasApiKey;
+  bool get hasCredentialConfiguration => isCodexCli
+      ? CodexAppServer.supportedPlatform
+      : isCodex
+      ? CodexCredentials.supportedPlatform
+      : hasApiKey;
 
   bool get hasApiKey => apiKey.trim().isNotEmpty;
 
-  bool get hasBaseUrl => effectiveBaseUrl.trim().isNotEmpty;
+  bool get hasBaseUrl => isCodexCli || effectiveBaseUrl.trim().isNotEmpty;
 
   bool get hasModels =>
       availableModels.isNotEmpty ||
@@ -655,7 +671,11 @@ extension AiProviderX on AiProvider {
       );
     }
     if (!isPlatformSupported) {
-      return tr(LocaleKeys.settingsCodexDesktopOnly);
+      return tr(
+        isCodexCli
+            ? LocaleKeys.settingsCodexCliMacosOnly
+            : LocaleKeys.settingsCodexDesktopOnly,
+      );
     }
     if (!hasCredentialConfiguration) return '请先填写 API Key，再启用提供商。';
     if (!hasBaseUrl) return '请先填写 Base URL，再启用提供商。';
@@ -982,10 +1002,10 @@ class AiSettings {
     return updateConfig(
       provider.copyWith(
         builtin: false,
-        models: provider.isCodex && provider.models.isEmpty
+        models: provider.usesCodexLogin && provider.models.isEmpty
             ? codexPresetModels
             : provider.models,
-        imageModels: provider.isCodex && provider.imageModels.isEmpty
+        imageModels: provider.usesCodexLogin && provider.imageModels.isEmpty
             ? codexPresetImageModels
             : provider.imageModels.isEmpty
             ? imageModelsForProvider(provider.type)

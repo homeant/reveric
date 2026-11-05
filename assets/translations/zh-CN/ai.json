@@ -292,6 +292,7 @@
   "ai.image_generated": "图片已生成",
   "ai.image_generation_failed": "图片生成失败",
   "ai.codex_image_auth_failed": "无法使用本机 Codex 登录信息，请在 Codex 中重新登录后重试。",
+  "ai.codex_cli_missing": "未找到 Codex CLI。请先安装 Codex CLI，然后重试。",
   "ai.codex_image_needs_chat_model": "请先为这个 Codex 供应商添加至少一个聊天模型，再生成图片。",
   "ai.generate_cover": "生成封面",
   "ai.no_image_model_configured": "未配置图片模型，请在 AI 设置中添加图片模型。",

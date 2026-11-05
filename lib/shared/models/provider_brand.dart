@@ -48,4 +48,6 @@ const providerLogoAssets = <String, String>{
 };
 
 String? providerLogoAsset(String type) =>
-    providerLogoAssets[type == 'codex' ? 'openai' : type];
+    providerLogoAssets[type == 'codex' || type == 'codex_cli'
+        ? 'openai'
+        : type];

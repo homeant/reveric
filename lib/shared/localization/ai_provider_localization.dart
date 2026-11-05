@@ -58,6 +58,7 @@ String localizedProviderTypeDescription(
   final key = switch (type) {
     AiProviderType.openai => LocaleKeys.settingsProviderDescriptionOpenai,
     AiProviderType.codex => LocaleKeys.settingsProviderDescriptionCodex,
+    AiProviderType.codex_cli => LocaleKeys.settingsProviderDescriptionCodexCli,
     AiProviderType.openai_compatible =>
       LocaleKeys.settingsProviderDescriptionOpenaiCompatible,
     AiProviderType.api88 => LocaleKeys.settingsProviderDescriptionApi88,

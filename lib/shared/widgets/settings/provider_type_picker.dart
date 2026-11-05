@@ -37,12 +37,15 @@ const _pickerKinds = [
 /// 可新建的类型：OpenAI 兼容最常用放首位，固定地址的平台排在可改地址的格式之后。
 /// Codex 依赖桌面登录，移动端不提供。
 List<AiProviderType> providerTypePickerTypes() {
+  final platform = defaultTargetPlatform;
   final mobile =
-      defaultTargetPlatform == TargetPlatform.android ||
-      defaultTargetPlatform == TargetPlatform.iOS;
+      platform == TargetPlatform.android || platform == TargetPlatform.iOS;
   final types = [
     for (final type in customAiProviderTypes)
-      if (!mobile || type != AiProviderType.codex) type,
+      if ((!mobile || type != AiProviderType.codex) &&
+          (platform == TargetPlatform.macOS ||
+              type != AiProviderType.codex_cli))
+        type,
   ];
   bool fixed(AiProviderType type) =>
       aiProviderTypeConfigs[type]?.fixedBaseUrl ?? false;

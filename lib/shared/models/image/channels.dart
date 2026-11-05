@@ -18,6 +18,7 @@ enum ImageProtocol {
   openai_images,
   new_api_images,
   codex_image,
+  codex_cli_image,
   gemini_image,
 }
 
@@ -104,6 +105,21 @@ final imageChannelModels = <ImageProtocol, Map<String, ImageChannelModel>>{
   },
   ImageProtocol.openai_images: _pixelSizeChannels,
   ImageProtocol.codex_image: _pixelSizeChannels,
+  ImageProtocol.codex_cli_image: {
+    'gpt-image-2': ImageChannelModel(
+      catalogId: 'gpt-image-2',
+      capabilities: ImageModelCapabilities(
+        ratios: {'auto'},
+        resolutions: {'auto'},
+        sizes: {},
+        unlimitedReferences: true,
+      ),
+      requestDefaults: ImageRequestDefaults(
+        size: ConfigValue(null),
+        quality: ConfigValue(null),
+      ),
+    ),
+  },
   ImageProtocol.gemini_image: _geminiChannels,
 };
 

@@ -36,5 +36,6 @@ String imageProviderType(ImageProtocol protocol) => switch (protocol) {
   ImageProtocol.atlascloud_image => 'atlascloud',
   ImageProtocol.openai_images => 'openai_compatible',
   ImageProtocol.codex_image => 'codex',
+  ImageProtocol.codex_cli_image => 'codex_cli',
   ImageProtocol.gemini_image => 'gemini',
 };

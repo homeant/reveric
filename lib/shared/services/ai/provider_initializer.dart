@@ -19,6 +19,7 @@ import '../../agent/client.dart';
 import '../../agent/client/openai_client.dart';
 import '../../agent/client/openai_responses_client.dart';
 import '../../agent/client/codex_client.dart';
+import '../../agent/client/codex_cli_client.dart';
 import '../../agent/client/anthropic_client.dart';
 import '../../agent/client/gemini_client.dart';
 import '../../agent/client/trace_headers_http_client.dart'
@@ -122,6 +123,8 @@ class AiProviderInitializer {
           httpClient: _httpClient,
           streamHttpClientFactory: _createStreamHttpClient,
         );
+      case AiProviderType.codex_cli:
+        return CodexCliClient(model: _chatModel);
       case AiProviderType.api88:
       case AiProviderType.ooki:
         return NewApiClient(_config).chat(

@@ -1336,6 +1336,7 @@ abstract final class LocaleKeys {
   static const aiImageGenerating = 'ai.image_generating';
   static const aiImageGenerationFailed = 'ai.image_generation_failed';
   static const aiCodexImageAuthFailed = 'ai.codex_image_auth_failed';
+  static const aiCodexCliMissing = 'ai.codex_cli_missing';
   static const aiCodexImageNeedsChatModel = 'ai.codex_image_needs_chat_model';
   static const aiModelUnavailable = 'ai.model_unavailable';
   static const aiModelUnavailableReselect = 'ai.model_unavailable_reselect';
@@ -4108,6 +4109,13 @@ abstract final class LocaleKeys {
       'settings.codex_auth_write_failed';
   static const settingsCodexAuthChanged = 'settings.codex_auth_changed';
   static const settingsCodexDesktopOnly = 'settings.codex_desktop_only';
+  static const settingsCodexCliMacosOnly = 'settings.codex_cli_macos_only';
+  static const settingsCodexCliChecking = 'settings.codex_cli_checking';
+  static const settingsCodexCliReady = 'settings.codex_cli_ready';
+  static const settingsCodexCliMissing = 'settings.codex_cli_missing';
+  static const settingsCodexCliNotSignedIn = 'settings.codex_cli_not_signed_in';
+  static const settingsCodexCliUnavailable = 'settings.codex_cli_unavailable';
+  static const settingsCodexCliHint = 'settings.codex_cli_hint';
   static const settingsAiApiKeyHint = 'settings.ai_api_key_hint';
   static const settingsAiBaseUrl = 'settings.ai_base_url';
   static const settingsAiBaseUrlHint = 'settings.ai_base_url_hint';
@@ -4785,6 +4793,8 @@ abstract final class LocaleKeys {
       'settings.provider_description_openai';
   static const settingsProviderDescriptionCodex =
       'settings.provider_description_codex';
+  static const settingsProviderDescriptionCodexCli =
+      'settings.provider_description_codex_cli';
   static const settingsProviderDescriptionOpenaiCompatible =
       'settings.provider_description_openai_compatible';
   static const settingsProviderDescriptionOoki =
