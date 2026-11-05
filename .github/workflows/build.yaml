@@ -13,12 +13,12 @@ on:
         description: 'Branch to checkout'
         required: true
         type: string
-        default: 'unstable'
+        default: 'main'
       platform:
         description: 'Target platform'
         required: true
         type: choice
-        default: 'windows'
+        default: 'macos'
         options:
           - all
           - macos
@@ -141,9 +141,8 @@ jobs:
 
   package-windows:
     if: |
-      github.event_name != 'workflow_dispatch' ||
-      inputs.platform == 'all' ||
-      inputs.platform == 'windows'
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.platform == 'all' || inputs.platform == 'windows')
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -234,9 +233,8 @@ jobs:
 
   package-android:
     if: |
-      github.event_name != 'workflow_dispatch' ||
-      inputs.platform == 'all' ||
-      inputs.platform == 'android'
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.platform == 'all' || inputs.platform == 'android')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

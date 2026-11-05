@@ -69,7 +69,7 @@ void main() {
                   'name': name,
                   'size': 1024,
                   'browser_download_url':
-                      'https://github.com/looplj/reveric/releases/download/v9.2.0/$name',
+                      'https://github.com/homeant/reveric/releases/download/v9.2.0/$name',
                 },
             ],
           }),
@@ -78,12 +78,16 @@ void main() {
       }),
     );
     expect(requests, [
-      Uri.parse('https://api.github.com/repos/looplj/reveric/releases/latest'),
+      Uri.parse('https://api.github.com/repos/homeant/reveric/releases/latest'),
     ]);
     expect(result, isA<UpdateAvailable>());
     final info = (result as UpdateAvailable).info;
     expect(info.version, '9.2.0');
-    expect(info.downloadUrl, endsWith(assets[Platform.operatingSystem]!));
+    expect(
+      info.downloadUrl,
+      'https://github.com/homeant/reveric/releases/download/v9.2.0/'
+      '${assets[Platform.operatingSystem]}',
+    );
     expect(info.fileSize, 1024);
   });
 
