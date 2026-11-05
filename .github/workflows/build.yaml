@@ -60,7 +60,9 @@ jobs:
       - run: dart pub global activate fastforge ${{ env.FASTFORGE_VERSION }}
       - name: Install packaging tools
         shell: bash
-        run: npm install -g appdmg
+        run: |
+          npm install -g appdmg
+          brew install p7zip
       - name: Update pubspec version from tag
         id: version
         shell: bash
@@ -80,6 +82,18 @@ jobs:
           content = re.sub(r'^version:.*', f'version: {ver}+{build}', content, flags=re.MULTILINE)
           with open('pubspec.yaml', 'w', encoding='utf-8') as f:
               f.write(content)
+          with open('lib/shared/app_config.dart', 'r', encoding='utf-8') as f:
+              app_config = f.read()
+          app_config, count = re.subn(
+              r"^const appVersion = '[^']*';$",
+              f"const appVersion = '{ver}+{build}';",
+              app_config,
+              flags=re.MULTILINE,
+          )
+          if count != 1:
+              raise SystemExit('Expected exactly one appVersion declaration')
+          with open('lib/shared/app_config.dart', 'w', encoding='utf-8') as f:
+              f.write(app_config)
           github_output = os.environ.get('GITHUB_OUTPUT')
           if github_output:
               with open(github_output, 'a', encoding='utf-8') as f:
