@@ -18,11 +18,13 @@ cmake --build "$depth_build" --parallel 4
 cmake --install "$depth_build" --prefix "$depth_destination"
 depth_identity="${EXPANDED_CODE_SIGN_IDENTITY:--}"
 if [ -z "$depth_identity" ]; then depth_identity=-; fi
-depth_sign_options=()
-if [ "$depth_identity" != - ]; then depth_sign_options=(--options runtime); fi
 for depth_file in "$depth_destination"/lib/*.dylib "$depth_destination/bin/reveric-depth-native"; do
   if [ ! -L "$depth_file" ]; then
-    codesign --force --sign "$depth_identity" "${depth_sign_options[@]}" "$depth_file"
+    if [ "$depth_identity" = - ]; then
+      codesign --force --sign - "$depth_file"
+    else
+      codesign --force --sign "$depth_identity" --options runtime "$depth_file"
+    fi
     codesign --verify --strict "$depth_file"
   fi
 done
