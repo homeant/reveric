@@ -111,6 +111,80 @@ void main() {
     }
   });
 
+  test(
+    'large UDP replies are transferred in datagrams below 8192 bytes',
+    () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      final service = UdpAppControl(0, captureKey: GlobalKey());
+      await service.start();
+      final client = await RawDatagramSocket.bind(
+        InternetAddress.loopbackIPv4,
+        0,
+      );
+      final responses = StreamController<Map<String, dynamic>>.broadcast();
+      final subscription = client.listen((event) {
+        if (event != RawSocketEvent.read) return;
+        Datagram? datagram;
+        while ((datagram = client.receive()) != null) {
+          responses.add(
+            jsonDecode(utf8.decode(datagram!.data)) as Map<String, dynamic>,
+          );
+        }
+      });
+
+      Future<Map<String, dynamic>> request(Map<String, Object> body) async {
+        final reply = responses.stream.first.timeout(
+          const Duration(seconds: 3),
+        );
+        client.send(
+          utf8.encode(jsonEncode(body)),
+          InternetAddress.loopbackIPv4,
+          service.boundPort!,
+        );
+        return reply;
+      }
+
+      try {
+        final largeMethod = 'x' * 8100;
+        final first = await request({'id': 8, 'method': largeMethod});
+        expect(first['id'], 8);
+        expect(first['ok'], true);
+        final transfer = first['result'] as Map<String, dynamic>;
+        final bytes = <int>[];
+        for (
+          var chunk = 0;
+          bytes.length < (transfer['bytes'] as int);
+          chunk++
+        ) {
+          final part = await request({
+            'id': 9,
+            'method': 'read',
+            'params': {'transfer': transfer['transfer'], 'chunk': chunk},
+          });
+          expect(utf8.encode(jsonEncode(part)).length, lessThan(8192));
+          expect(part['ok'], true);
+          bytes.addAll(base64Decode((part['result'] as Map)['data'] as String));
+        }
+        final original = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+        expect(original['id'], 8);
+        expect(original['ok'], false);
+        expect((original['error'] as Map)['message'], contains(largeMethod));
+
+        final pending = await request({
+          'id': 10,
+          'method': 'fileDialog.pending',
+        });
+        expect(pending['ok'], true);
+        expect(pending['id'], 10);
+      } finally {
+        await subscription.cancel();
+        await responses.close();
+        client.close();
+        await service.close();
+      }
+    },
+  );
+
   test('settings toggle starts, stops, and persists UDP control', () async {
     TestWidgetsFlutterBinding.ensureInitialized();
     SharedPreferences.setMockInitialValues({});

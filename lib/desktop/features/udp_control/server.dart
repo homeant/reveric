@@ -19,6 +19,8 @@ import 'file_dialog.dart';
 
 final _log = AppLogger.forModule('UdpControl');
 const defaultUdpControlPort = 8765;
+const _maxReplyBytes = 8192;
+const _transferChunkBytes = 4096;
 
 /// Omit the option to leave the listener completely disabled.
 int? udpControlPortFromArgs(List<String> args) {
@@ -95,7 +97,17 @@ class UdpAppControl {
         Datagram? datagram;
         while ((datagram = socket.receive()) != null) {
           final request = datagram!;
-          _requestQueue = _requestQueue.then((_) => _handle(request));
+          _requestQueue = _requestQueue.then((_) async {
+            try {
+              await _handle(request);
+            } catch (error, stackTrace) {
+              _log.error(
+                'UDP response failed',
+                error: error,
+                stackTrace: stackTrace,
+              );
+            }
+          });
         }
       }
     });
@@ -150,7 +162,7 @@ class UdpAppControl {
 
   void _reply(Datagram datagram, Map<String, Object?> response) {
     var bytes = Uint8List.fromList(utf8.encode(jsonEncode(response)));
-    if (bytes.length > 24000) {
+    if (bytes.length > _maxReplyBytes) {
       final transfer = _store(bytes);
       bytes = Uint8List.fromList(
         utf8.encode(
@@ -167,7 +179,11 @@ class UdpAppControl {
     }
     final id = _nextTransfer++;
     _transfers[id] = bytes;
-    return {'transfer': id, 'bytes': bytes.length, 'chunkSize': 12000};
+    return {
+      'transfer': id,
+      'bytes': bytes.length,
+      'chunkSize': _transferChunkBytes,
+    };
   }
 
   Future<Object?> _dispatch(String method, Map<String, dynamic> params) async {
@@ -355,11 +371,11 @@ class UdpAppControl {
     if (data == null) {
       throw StateError('Transfer $id is unavailable');
     }
-    if (chunk < 0 || chunk * 12000 >= data.length) {
+    if (chunk < 0 || chunk * _transferChunkBytes >= data.length) {
       throw RangeError.value(chunk, 'chunk');
     }
-    final start = chunk * 12000;
-    final end = (start + 12000).clamp(0, data.length);
+    final start = chunk * _transferChunkBytes;
+    final end = (start + _transferChunkBytes).clamp(0, data.length);
     return {
       'transfer': id,
       'chunk': chunk,
