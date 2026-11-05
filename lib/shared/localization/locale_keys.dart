@@ -4687,6 +4687,11 @@ abstract final class LocaleKeys {
   static const settingsAppBackgroundFailed = 'settings.app_background_failed';
   static const settingsEnglish = 'settings.english';
   static const settingsGeneral = 'settings.general';
+  static const settingsUdpControlTitle = 'settings.udp_control_title';
+  static const settingsUdpControlDescription =
+      'settings.udp_control_description';
+  static const settingsUdpControlEnabled = 'settings.udp_control_enabled';
+  static const settingsUdpControlFailed = 'settings.udp_control_failed';
   static const settingsGroupAi = 'settings.group_ai';
   static const settingsGroupCommunity = 'settings.group_community';
   static const settingsGroupData = 'settings.group_data';

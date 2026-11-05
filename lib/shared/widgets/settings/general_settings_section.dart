@@ -1,4 +1,4 @@
-// 职责: 共享通用设置区 — 语言、网络代理与匿名诊断上报同意。
+// 职责: 共享通用设置区 — 语言、网络代理、匿名诊断上报同意及平台附加设置。
 // 关联文件:
 //   lib/shared/widgets/settings/settings_section_widgets.dart
 //   lib/shared/widgets/settings/proxy_settings_section.dart
@@ -29,7 +29,9 @@ import 'settings_section_widgets.dart';
 
 /// 通用设置 section（语言、网络代理、匿名诊断上报）。
 class GeneralSettingsSection extends StatelessWidget {
-  const GeneralSettingsSection({super.key});
+  const GeneralSettingsSection({super.key, this.additionalSection});
+
+  final Widget? additionalSection;
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +43,10 @@ class GeneralSettingsSection extends StatelessWidget {
           const _LanguageSection(),
           const SizedBox(height: RevericSpacing.x4l),
           const ProxySettingsSection(),
+          if (additionalSection != null) ...[
+            const SizedBox(height: RevericSpacing.x4l),
+            additionalSection!,
+          ],
           // 本构建未配置上报地址时同意无效，不展示入口。
           if (anonymousReportingBaseUrl.isNotEmpty) ...[
             const SizedBox(height: RevericSpacing.x4l),

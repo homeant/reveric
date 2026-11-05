@@ -12,6 +12,7 @@
 //   lib/shared/logger/app_logger.dart
 //   lib/shared/logger/flutter_error_logger.dart
 //   lib/shared/logger/startup_failure_reporter.dart
+//   lib/desktop/features/udp_control/controller.dart
 //   lib/shared/localization/locale_keys.dart
 //   assets/translations/en/common.json
 //   assets/translations/zh-CN/common.json
@@ -34,6 +35,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'desktop/pages/home.dart';
+import 'desktop/features/udp_control/controller.dart';
+import 'desktop/features/udp_control/server.dart';
 import 'desktop/widgets/desktop_window_frame.dart';
 import 'shared/widgets/app_startup_gate.dart';
 import 'shared/widgets/file_workspace_startup_gate.dart';
@@ -95,7 +98,7 @@ const _kStartupShowDelay = Duration(milliseconds: 800);
 bool get _isDesktopPlatform =>
     Platform.isMacOS || Platform.isWindows || Platform.isLinux;
 
-Future<void> main() async {
+Future<void> main(List<String> args) async {
   _launchStopwatch.start();
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -127,7 +130,11 @@ Future<void> main() async {
   };
 
   try {
-    await _startApplication();
+    final udpControlPort = udpControlPortFromArgs(args);
+    if (udpControlPort != null && !(Platform.isMacOS || Platform.isWindows)) {
+      throw UnsupportedError('UDP control is supported on macOS and Windows');
+    }
+    await _startApplication(udpControlPort: udpControlPort);
   } catch (error, stackTrace) {
     _log.error(
       'Application startup failed',
@@ -149,7 +156,7 @@ Future<void> main() async {
   }
 }
 
-Future<void> _startApplication() async {
+Future<void> _startApplication({int? udpControlPort}) async {
   // 启动里程碑用 checkpoint（立即落盘）：启动期原生崩溃会丢缓冲日志，
   // 崩溃后据此判断死在哪个初始化阶段。
   _log.checkpoint('MAIN START');
@@ -220,6 +227,7 @@ Future<void> _startApplication() async {
   _log.info('ImageCache configured');
 
   _log.checkpoint('Running app...');
+  final udpCaptureKey = GlobalKey();
   runApp(
     EasyLocalization(
       supportedLocales: const [Locale('zh', 'CN'), Locale('en')],
@@ -245,7 +253,12 @@ Future<void> _startApplication() async {
                     mediaOperationsSupportedProvider.overrideWithValue(true),
                 ],
                 observers: [if (kDebugMode) _AsyncProviderTransitionObserver()],
-                child: const _EagerInitialization(child: MyApp()),
+                child: Platform.isMacOS || Platform.isWindows
+                    ? RepaintBoundary(
+                        key: udpCaptureKey,
+                        child: const _EagerInitialization(child: MyApp()),
+                      )
+                    : const _EagerInitialization(child: MyApp()),
               ),
             ),
           );
@@ -253,6 +266,12 @@ Future<void> _startApplication() async {
       ),
     ),
   );
+  if (Platform.isMacOS || Platform.isWindows) {
+    await UdpControlController.instance.initialize(
+      captureKey: udpCaptureKey,
+      commandLinePort: udpControlPort,
+    );
+  }
 }
 
 /// 执行一次性种子与迁移任务，并在挂载业务 Provider 前释放数据库。
