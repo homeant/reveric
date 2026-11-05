@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
-import 'package:reveric/shared/localization/merging_asset_loader.dart';
 import 'package:reveric/shared/theme/theme.dart';
 import 'package:reveric/shared/widgets/ai/markdown_text.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -138,7 +137,7 @@ void main() {
 Widget _wrap(String content, {bool selectable = true}) => EasyLocalization(
   supportedLocales: const [Locale('en')],
   path: 'assets/translations',
-  assetLoader: const MergingAssetLoader(),
+  assetLoader: const _MarkdownTranslationLoader(),
   fallbackLocale: const Locale('en'),
   startLocale: const Locale('en'),
   child: Builder(
@@ -157,3 +156,12 @@ Widget _wrap(String content, {bool selectable = true}) => EasyLocalization(
     ),
   ),
 );
+
+class _MarkdownTranslationLoader extends AssetLoader {
+  const _MarkdownTranslationLoader();
+
+  @override
+  Future<Map<String, dynamic>> load(String path, Locale locale) async => {
+    'common.open_link_failed': 'Unable to open link.',
+  };
+}
