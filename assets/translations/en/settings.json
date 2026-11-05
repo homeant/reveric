@@ -162,6 +162,7 @@
   "settings.provider_description_minimax": "Access MiniMax for chat, video, speech, and music generation.",
   "settings.provider_description_agnes": "Access Agnes AI for image and video generation.",
   "settings.provider_description_atlascloud": "Access models from multiple providers through AtlasCloud for chat, image, video, and audio generation.",
+  "settings.provider_description_evolink": "Generate images with EvoLink's Seedream 5.0 Pro. Requires an API key; reference images also require object storage.",
   "settings.provider_unsupported_badge": "Unsupported in this version",
   "settings.provider_type_unsupported": "This version does not support provider type {type}.",
   "settings.provider_chat_models_label": "Chat Models",

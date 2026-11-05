@@ -113,6 +113,8 @@ class AiProviderInitializer {
         throw UnsupportedError(
           'Agnes is configured for image and video generation only',
         );
+      case AiProviderType.evolink:
+        throw UnsupportedError('EvoLink is configured for image generation only');
       case AiProviderType.metaso:
         throw UnsupportedError('METASO supports video generation only');
       case AiProviderType.codex:

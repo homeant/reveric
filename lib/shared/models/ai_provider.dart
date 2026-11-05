@@ -52,6 +52,7 @@ enum AiProviderType {
   metaso,
   agnes,
   atlascloud,
+  evolink,
 }
 
 enum ReasoningEffort { none, low, medium, high }
@@ -103,6 +104,12 @@ class AiProviderTypeConfig {
 const Set<AiModelKind> _chatOnlyKinds = {AiModelKind.chat};
 
 const Map<AiProviderType, AiProviderTypeConfig> aiProviderTypeConfigs = {
+  AiProviderType.evolink: AiProviderTypeConfig(
+    displayName: 'EvoLink',
+    modelIdSource: ModelIdSource.registered,
+    imageProtocol: ImageProtocol.evolink_image,
+    fixedBaseUrl: true,
+  ),
   AiProviderType.atlascloud: AiProviderTypeConfig(
     displayName: 'AtlasCloud',
     modelIdSource: ModelIdSource.registered,
@@ -272,6 +279,7 @@ String aiProviderFixedBaseUrl(AiProviderType type) => switch (type) {
   AiProviderType.api88 => 'https://api.88api.ai/v1',
   AiProviderType.ooki => 'https://api.ookiapi.com/v1',
   AiProviderType.atlascloud => 'https://api.atlascloud.ai/v1',
+  AiProviderType.evolink => 'https://api.evolink.ai/v1',
   AiProviderType.codex => 'https://chatgpt.com/backend-api/codex',
   AiProviderType.openrouter => 'https://openrouter.ai/api/v1',
   AiProviderType.volcengine => 'https://ark.cn-beijing.volces.com/api/v3',

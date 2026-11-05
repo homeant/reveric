@@ -162,6 +162,7 @@
   "settings.provider_description_minimax": "接入 MiniMax，用于对话、视频、语音和音乐生成。",
   "settings.provider_description_agnes": "接入 Agnes AI，用于图像和视频生成。",
   "settings.provider_description_atlascloud": "通过 AtlasCloud 接入多家模型，支持对话、图像、视频和音频生成。",
+  "settings.provider_description_evolink": "通过 EvoLink 的 Seedream 5.0 Pro 生图；需 API Key，使用参考图还需配置对象存储。",
   "settings.provider_unsupported_badge": "当前版本不支持",
   "settings.provider_type_unsupported": "当前版本不支持提供商类型 {type}。",
   "settings.provider_chat_models_label": "聊天模型",

@@ -3,6 +3,7 @@
 //   lib/shared/providers/ai_providers.dart
 //   lib/shared/services/ai/image.dart
 //   lib/shared/services/map_place_name_reader.dart
+//   lib/shared/providers/object_storage.dart
 // 遵循的 Rules:
 //   .agents/rules/state-management.md
 //   .agents/rules/ai-calling.md
@@ -14,6 +15,7 @@ import '../services/ai/tools.dart'
     show AiImageGenerationCallback, AiMultiImageEditCallback;
 
 import 'settings_providers.dart';
+import 'object_storage.dart';
 import '../services/map_place_name_reader.dart' show MapPlaceNameReader;
 
 export 'map_studio_controller.dart' show mapStudioControllerProvider;
@@ -52,6 +54,7 @@ MapStudioImageModelSelection? mapStudioImageModelSelection(Ref ref) {
 AiMultiImageEditCallback? mapImageEditCallback(Ref ref) {
   final selection = ref.watch(mapStudioImageModelSelectionProvider);
   if (selection == null) return null;
+  final references = ref.watch(imageReferenceStorageServiceProvider);
   return (
     String prompt, {
     required List<String> imageData,
@@ -62,6 +65,7 @@ AiMultiImageEditCallback? mapImageEditCallback(Ref ref) {
     return AiImageGenerationService(
       selection.config,
       model: model ?? selection.model,
+      referenceUploader: references.upload,
     ).editImages(
       prompt,
       imageData: imageData,

@@ -82,6 +82,7 @@ String localizedProviderTypeDescription(
     AiProviderType.agnes => LocaleKeys.settingsProviderDescriptionAgnes,
     AiProviderType.atlascloud =>
       LocaleKeys.settingsProviderDescriptionAtlascloud,
+    AiProviderType.evolink => LocaleKeys.settingsProviderDescriptionEvolink,
   };
   return context.t(key);
 }

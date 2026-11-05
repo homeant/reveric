@@ -2,8 +2,9 @@
 // 关联文件:
 //   lib/shared/models/ai_provider.dart
 //   lib/shared/models/image/channels.dart
-//   lib/shared/services/ai/image/client.dart
 //   lib/shared/services/ai/codex/image_client.dart
+//   lib/shared/services/ai/image/evolink.dart
+//   lib/shared/services/ai/image/codex_cli.dart
 // ignore_for_file: prefer_initializing_formals
 import 'dart:async';
 import 'dart:io';
@@ -18,6 +19,7 @@ import 'codex/image_client.dart';
 import 'image/agnes.dart';
 import 'image/ark.dart';
 import 'image/atlascloud.dart';
+import 'image/evolink.dart';
 import 'image/client.dart';
 import 'image/codex.dart';
 import 'image/codex_cli.dart';
@@ -186,12 +188,15 @@ class AiImageGenerationService {
     this._config, {
     required String model,
     CodexImageClient Function()? codexImageClientFactory,
+    Future<Uri> Function(String imageData)? referenceUploader,
   }) : _model = model,
-       _codexImageClientFactory = codexImageClientFactory;
+       _codexImageClientFactory = codexImageClientFactory,
+       _referenceUploader = referenceUploader;
 
   final AiProvider _config;
   final String _model;
   final CodexImageClient Function()? _codexImageClientFactory;
+  final Future<Uri> Function(String imageData)? _referenceUploader;
 
   ImageClient? _client() => switch (_config.typeConfig.imageProtocol) {
     ImageProtocol.agnes_image => AgnesImageClient(_config),
@@ -199,6 +204,10 @@ class AiImageGenerationService {
     ImageProtocol.ark_image => ArkImageClient(_config),
     ImageProtocol.openrouter_image => OpenRouterImageClient(_config),
     ImageProtocol.atlascloud_image => AtlasCloudImageClient(_config),
+    ImageProtocol.evolink_image => EvoLinkImageClient(
+      _config,
+      uploadReference: _referenceUploader,
+    ),
     ImageProtocol.new_api_images => NewApiClient(_config).image(),
     ImageProtocol.openai_images => OpenAiImageClient(_config),
     ImageProtocol.codex_image => CodexImageGenerationClient(

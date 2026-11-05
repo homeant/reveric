@@ -4829,6 +4829,8 @@ abstract final class LocaleKeys {
       'settings.provider_description_agnes';
   static const settingsProviderDescriptionAtlascloud =
       'settings.provider_description_atlascloud';
+  static const settingsProviderDescriptionEvolink =
+      'settings.provider_description_evolink';
 
   static const settingsProviderUnsupportedBadge =
       'settings.provider_unsupported_badge';
