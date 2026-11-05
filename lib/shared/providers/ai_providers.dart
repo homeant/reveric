@@ -44,6 +44,7 @@ import 'ai_mode_processing.dart';
 import 'canvas_providers.dart';
 import 'maps_providers.dart';
 import 'novel_providers.dart';
+import 'object_storage.dart';
 import 'settings_providers.dart';
 import 'spawn_agent_run_providers.dart';
 
@@ -2439,11 +2440,13 @@ AiImageGenerationCallback? imageGenerationCallback(Ref ref, String workId) {
   }
   final defaultModel = preferredOption.model;
   final imageLibrary = ref.watch(imageLibraryServiceProvider);
+  final references = ref.watch(imageReferenceStorageServiceProvider);
   return (String prompt, {String? model, String? size, String? quality}) async {
     // 生图工具只作用于作品内的角色和物品，结果按作品入库。
     final service = AiImageGenerationService(
       config,
       model: model ?? defaultModel,
+      referenceUploader: references.upload,
     );
     final result = await service.generateImage(
       prompt,
@@ -2485,6 +2488,7 @@ AiImageGenerationCallback? coverImageGenerationCallback(Ref ref) {
 AiMultiImageEditCallback? coverImageMultiEditCallback(Ref ref) {
   final selection = ref.watch(coverStudioImageModelSelectionProvider);
   if (selection == null) return null;
+  final references = ref.watch(imageReferenceStorageServiceProvider);
   return (
     String prompt, {
     required List<String> imageData,
@@ -2495,6 +2499,7 @@ AiMultiImageEditCallback? coverImageMultiEditCallback(Ref ref) {
     return AiImageGenerationService(
       selection.config,
       model: model ?? selection.model,
+      referenceUploader: references.upload,
     ).editImages(
       prompt,
       imageData: imageData,
@@ -2524,11 +2529,13 @@ AiImageEditCallback? imageEditCallback(Ref ref, String workId) {
   }
   final defaultModel = preferredOption.model;
   final imageLibrary = ref.watch(imageLibraryServiceProvider);
+  final references = ref.watch(imageReferenceStorageServiceProvider);
   return (String prompt, {required String imageData, String? model}) async {
     // 生图工具只作用于作品内的角色和物品，结果按作品入库。
     final service = AiImageGenerationService(
       config,
       model: model ?? defaultModel,
+      referenceUploader: references.upload,
     );
     final result = await service.editImage(
       prompt,
@@ -2568,6 +2575,7 @@ AiMultiImageEditCallback? imageMultiEditCallback(Ref ref) {
     return null;
   }
   final defaultModel = preferredOption.model;
+  final references = ref.watch(imageReferenceStorageServiceProvider);
   return (
     String prompt, {
     required List<String> imageData,
@@ -2578,6 +2586,7 @@ AiMultiImageEditCallback? imageMultiEditCallback(Ref ref) {
     final service = AiImageGenerationService(
       config,
       model: model ?? defaultModel,
+      referenceUploader: references.upload,
     );
     final result = await service.editImages(
       prompt,

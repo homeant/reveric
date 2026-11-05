@@ -34,6 +34,7 @@ String imageProviderType(ImageProtocol protocol) => switch (protocol) {
   ImageProtocol.ark_image => 'doubao',
   ImageProtocol.openrouter_image => 'openrouter',
   ImageProtocol.atlascloud_image => 'atlascloud',
+  ImageProtocol.evolink_image => 'evolink',
   ImageProtocol.openai_images => 'openai_compatible',
   ImageProtocol.codex_image => 'codex',
   ImageProtocol.gemini_image => 'gemini',

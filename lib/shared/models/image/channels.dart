@@ -15,6 +15,7 @@ enum ImageProtocol {
   ark_image,
   openrouter_image,
   atlascloud_image,
+  evolink_image,
   openai_images,
   new_api_images,
   codex_image,
@@ -108,6 +109,30 @@ final imageChannelModels = <ImageProtocol, Map<String, ImageChannelModel>>{
 };
 
 const _listedImageChannels = <ImageProtocol, Map<String, ImageChannelModel>>{
+  ImageProtocol.evolink_image: {
+    'doubao-seedream-5.0-pro': ImageChannelModel(
+      catalogId: 'seedream-5.0-pro',
+      capabilities: ImageModelCapabilities(
+        ratios: {
+          'auto',
+          '1:1',
+          '2:3',
+          '3:2',
+          '3:4',
+          '4:3',
+          '4:5',
+          '5:4',
+          '9:16',
+          '16:9',
+          '21:9',
+        },
+        resolutions: {'1K', '1.5K', '2K'},
+        sizes: {},
+        maxReferences: 10,
+      ),
+      requestDefaults: ImageRequestDefaults(size: ConfigValue(null)),
+    ),
+  },
   // https://www.atlascloud.ai/docs/openapi-index
   ImageProtocol.atlascloud_image: {
     // https://static.atlascloud.ai/model/schema/openai-gpt-image-2.5-sunburst-text-to-image.json
