@@ -4,19 +4,27 @@
 //   lib/shared/services/ai/image.dart
 //   lib/shared/providers/novel_providers.dart
 //   lib/shared/providers/video_tasks.dart
+//   lib/shared/providers/object_storage.dart
 // 遵循的 Rules:
 //   .agents/rules/state-management.md
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../utils/storage_paths.dart';
 import '../services/ai/image.dart';
 import '../services/production/image_service.dart';
 import '../services/production/image_generate_orchestrator.dart';
 import 'novel_providers.dart';
+import 'object_storage.dart';
 import 'video_tasks.dart';
 
-final productionImageInvokeProvider = Provider<ProductionImageInvoke>(
-  (ref) => (provider, request, onSubmitted) async {
-    final image = AiImageGenerationService(provider, model: request.modelId);
+final productionImageInvokeProvider = Provider<ProductionImageInvoke>((ref) {
+  final references = ref.watch(imageReferenceStorageServiceProvider);
+  return (provider, request, onSubmitted) async {
+    final image = AiImageGenerationService(
+      provider,
+      model: request.modelId,
+      referenceUploader: references.upload,
+    );
     final database = ref.read(appDatabaseProvider);
     final imageData = <String>[];
     for (final reference in request.references) {
@@ -44,8 +52,8 @@ final productionImageInvokeProvider = Provider<ProductionImageInvoke>(
             resolution: request.resolution,
             onSubmitted: onSubmitted,
           );
-  },
-);
+  };
+});
 
 // One application instance owns in-flight image requests; pages only watch DB streams.
 final imageTaskServiceProvider = Provider<ImageTaskService>((ref) {
