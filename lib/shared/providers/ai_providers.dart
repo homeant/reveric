@@ -1318,6 +1318,39 @@ class AiChatSession extends _$AiChatSession {
     _setStreamStateThrottled(state.copyWith(messages: nextMessages));
   }
 
+  /// Correct a completed assistant claim while retaining tool and image blocks.
+  void replaceAssistantText(String messageId, String text) {
+    if (!ref.mounted) {
+      return;
+    }
+    final messages = List<AiMessage>.from(state.messages);
+    final index = messages.indexWhere(
+      (message) =>
+          message.id == messageId && message.role == AiMessageRole.assistant,
+    );
+    if (index < 0) {
+      return;
+    }
+    final message = messages[index];
+    final blocks = <AiMessageBlock>[];
+    var hasText = false;
+    for (final block in message.blocks) {
+      if (block is AiTextBlock) {
+        if (!hasText) {
+          blocks.add(block.copyWith(text: text));
+          hasText = true;
+        }
+      } else {
+        blocks.add(block);
+      }
+    }
+    if (!hasText) {
+      blocks.add(AiTextBlock(id: '${message.id}_text', text: text));
+    }
+    messages[index] = message.copyWith(content: text, blocks: blocks);
+    state = state.copyWith(messages: messages);
+  }
+
   /// Append a reasoning delta to the last assistant message. Reasoning is kept
   /// separate from visible text so the UI can default-collapse it.
   void appendThinkingDelta(String delta) {

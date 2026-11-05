@@ -116,6 +116,26 @@ import 'tools.dart';
 
 final _log = AppLogger.forModule('ChatTurnRunner');
 
+final _completedImageClaim = RegExp(
+  r'(?:图|图片|照片|头像|定妆照|四视图).{0,32}(?:已|已经)(?:成功)?生成'
+  r'|(?:已|已经).{0,32}(?:图|图片|照片|头像|定妆照|四视图).{0,16}(?:生成|做好|完成)'
+  r'|(?:已|已经)(?:生成|完成).{0,32}(?:图|图片|照片|头像|定妆照)'
+  r'|\b(?:image|picture|photo|portrait|avatar)\b.{0,32}\b(?:generated|created|ready)\b',
+  caseSensitive: false,
+);
+final _negatedImageClaim = RegExp(
+  r'没有|并未|尚未|未实际|不准确|误称|并没有|\b(?:not|never|wrongly)\b',
+  caseSensitive: false,
+);
+
+bool _claimsCompletedImage(String text) => text
+    .split(RegExp(r'[。！？!?\n]'))
+    .any(
+      (sentence) =>
+          _completedImageClaim.hasMatch(sentence) &&
+          !_negatedImageClaim.hasMatch(sentence),
+    );
+
 /// 等待全局 SubAgent 真源完成加载，再生成本轮可执行列表。
 ///
 /// UI 的同步合并 provider 在首次加载期间会暂时返回空列表；turn 执行边界不能
@@ -1863,6 +1883,11 @@ class ChatTurnRunner {
     );
     var uiAssistantStreaming = false;
     AiUsage? finalUsage;
+    late final Agent agent;
+    var doneFinalText = '';
+    String? correctedImageClaimText;
+    String? currentAgentAssistantMessageId;
+    var imageClaimRetryIssued = false;
     String? nextStreamingMessageId = streamingMessageId;
     String? ownedStreamingMessageId;
     void startUiAssistantMessage() {
@@ -1952,6 +1977,77 @@ class ChatTurnRunner {
       }
     }
 
+    void correctUnbackedImageClaim() {
+      final messages = container
+          .read(aiChatSessionProvider(sessionId))
+          .messages;
+      final current = messages
+          .where(
+            (message) =>
+                message.role == AiMessageRole.assistant && message.isStreaming,
+          )
+          .lastOrNull;
+      final hasImageResult = messages.any(
+        (message) => message.blocks.any(
+          (block) =>
+              (block is AiImageBlock &&
+                  block.status == AiImageStatus.success &&
+                  block.hasImage) ||
+              (block is AiToolCallBlock &&
+                  block.status == AiToolCallStatus.success &&
+                  _imageToolNameForToolCall(block.toolName, block.arguments) !=
+                      null &&
+                  block.result?['success'] == true &&
+                  block.result?['asset_id'] is String &&
+                  block.result?['local_path'] is String),
+        ),
+      );
+      if (current == null ||
+          hasImageResult ||
+          !_claimsCompletedImage(current.effectiveText)) {
+        return;
+      }
+      final notice = tr(LocaleKeys.aiImageNoResult);
+      sessionNotifier.replaceAssistantText(current.id, notice);
+      final memory = agent.contextManager.messages.toList();
+      final memoryIndex = memory.lastIndexWhere(
+        (message) =>
+            message.id == currentAgentAssistantMessageId &&
+            message.role == AgentMessageRole.assistant,
+      );
+      if (memoryIndex >= 0) {
+        final message = memory[memoryIndex];
+        memory[memoryIndex] = message.copyWith(
+          content: notice,
+          blocks: [
+            TextBlock(notice),
+            ...message.blocks.where((block) => block is! TextBlock),
+          ],
+        );
+        agent.contextManager.setMessages(memory);
+      }
+      correctedImageClaimText = notice;
+      doneFinalText = notice;
+      _log.info(
+        'requestId=$requestId corrected image completion claim '
+        'without a successful image result',
+      );
+      if (!imageClaimRetryIssued) {
+        imageClaimRetryIssued = true;
+        agent.followUp(
+          AgentMessage.user(
+            id: 'image_result_check_$requestId',
+            content:
+                'Your last reply claimed an image was generated, but '
+                'no image-generation tool returned an image. If the '
+                'user requested an image, call Run to generate it now. '
+                'Otherwise explain that no image was generated. '
+                'Only claim success after a real image result.',
+          ),
+        );
+      }
+    }
+
     /// 本轮所有 tool block 进入终态后再 endStreaming 并落库；与 AgentMessageEnd 推迟结束配对。
     Future<void> finishUiAssistantRoundIfSettled(String eventName) async {
       if (!uiAssistantStreaming) {
@@ -1973,6 +2069,7 @@ class ChatTurnRunner {
       if (!aiAssistantMessageToolCallsSettled(messages[streamingIndex])) {
         return;
       }
+      correctUnbackedImageClaim();
       sessionNotifier.endStreamingMessage(usage: finalUsage);
       uiAssistantStreaming = false;
       finalUsage = null;
@@ -1994,7 +2091,6 @@ class ChatTurnRunner {
     startUiAssistantMessage();
     sessionNotifier.setWaitingForResponse(true);
 
-    late final Agent agent;
     try {
       final resolvedAgent = await getOrCreateChatAgent(sessionId: sessionId);
       if (resolvedAgent == null) {
@@ -2062,7 +2158,6 @@ class ChatTurnRunner {
     var codemodeDispatched = false;
     final requestSourceTurnIds = <String>{};
     ChatTurnError? turnError;
-    var doneFinalText = '';
     String? terminalFailureMessage;
     var reportedCompactionCount = agent.contextManager.compactionCount;
 
@@ -2160,6 +2255,8 @@ class ChatTurnRunner {
             sessionNotifier.setWaitingForResponse(true);
           case AgentMessageStart(:final round):
             _log.info('requestId=$requestId AgentMessageStart round=$round');
+            currentAgentAssistantMessageId = null;
+            correctedImageClaimText = null;
             // 截断续写会先发 AgentMessageEnd，正常已收口。若仍挂着上一条
             // streaming（例如半截 tool 卡让 MessageEnd 推迟了），有可见正文则
             // 落库后新开气泡，不要把两轮拼进同一条。thinking-only 没有可见
@@ -2466,6 +2563,9 @@ class ChatTurnRunner {
             _log.info(
               'requestId=$requestId AgentMessageAdded id=${message.id}',
             );
+            if (message.role == AgentMessageRole.assistant) {
+              currentAgentAssistantMessageId = message.id;
+            }
             if (message.role == AgentMessageRole.user &&
                 message.content.trim().startsWith('<system-remind')) {
               final isCompletionReminder = completionMessageIds.contains(
@@ -2576,6 +2676,7 @@ class ChatTurnRunner {
                 await finishUiAssistantRoundIfSettled('AgentMessageEnd');
                 break;
               }
+              correctUnbackedImageClaim();
               sessionNotifier.endStreamingMessage(usage: finalUsage);
               uiAssistantStreaming = false;
               finalUsage = null;
@@ -2615,7 +2716,9 @@ class ChatTurnRunner {
             _log.info(
               'requestId=$requestId AgentDone finalTextChars=${finalText.length} fallback=${!receivedVisibleText}',
             );
-            if (finalText.trim().isNotEmpty) {
+            if (correctedImageClaimText != null) {
+              doneFinalText = correctedImageClaimText!;
+            } else if (finalText.trim().isNotEmpty) {
               doneFinalText = finalText;
             }
             if (!receivedVisibleText && finalText.trim().isNotEmpty) {

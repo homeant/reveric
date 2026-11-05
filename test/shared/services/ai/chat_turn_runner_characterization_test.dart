@@ -551,6 +551,7 @@ void main() {
     expect(toolCall.callId, 'avatar');
     expect(toolCall.result?['local_path'], 'images/avatar.png');
     expect(toolCall.result?['asset_id'], 'avatar-asset');
+    expect(messages.last.effectiveText, '头像已生成');
 
     final replay = messages
         .expand(convertAiMessageToAgentMessagesForModel)
@@ -558,6 +559,201 @@ void main() {
         .toList();
     expect(replay.whereType<ToolCallBlock>().single.callId, 'avatar');
     expect(replay.whereType<ToolResultBlock>().single.toolCallId, 'avatar');
+  });
+
+  test('corrects an image completion claim without an image result', () async {
+    final container = buildTestContainer();
+    addTearDown(container.dispose);
+    final agent = FakeAgent.create(
+      responses: const [FakeProviderClientResponse.text('周牧的全身图已生成并显示在上方。')],
+    );
+    final seeded = seedSession(
+      container,
+      sessionId: 'unbacked-image-claim',
+      agent: agent,
+      userText: '生成周牧的单人全身图',
+    );
+    final runtime = container.read(
+      aiChatRuntimeProvider(seeded.sessionId).notifier,
+    );
+
+    final outcome = await buildRunner(container).runTurn(
+      '生成周牧的单人全身图',
+      requestId: seeded.requestId,
+      sessionId: seeded.sessionId,
+    );
+    runtime.markRequestIdle(seeded.requestId, notifyOnComplete: false);
+
+    final message = container
+        .read(aiChatSessionProvider(seeded.sessionId))
+        .messages
+        .last;
+    expect(message.effectiveText, isNot(contains('已生成')));
+    expect(message.effectiveText, contains('ai.image_no_result'));
+    expect(outcome.finalText, message.effectiveText);
+    expect(agent.contextManager.messages.last.content, message.effectiveText);
+  });
+
+  test('retries an unsupported image claim and keeps the real image', () async {
+    final container = buildTestContainer();
+    addTearDown(container.dispose);
+    final dispatcher = FakeAgentToolDispatcher(
+      tools: {
+        'Run': FakeAgentTool(
+          def: const ToolDef(
+            name: 'Run',
+            description: 'Run',
+            inputSchema: {'type': 'object'},
+          ),
+          handler: (_, _) async => {
+            'ok': true,
+            'success': true,
+            'command': 'character generate-photo',
+            'local_path': 'images/portrait.png',
+            'asset_id': 'portrait-asset',
+            'character_id': 'character_1',
+          },
+        ),
+      },
+    );
+    final seeded = seedSession(
+      container,
+      sessionId: 'retry-image-claim',
+      agent: FakeAgent.create(
+        toolManager: dispatcher,
+        responses: const [
+          FakeProviderClientResponse.text('周牧的全身图已生成。'),
+          FakeProviderClientResponse.toolCalls([
+            ToolCall(
+              callId: 'portrait',
+              toolName: 'Run',
+              arguments: {
+                'command': 'character',
+                'subcommand': 'generate-photo',
+                'options': {'character': 'character_1', 'prompt': '周牧全身照'},
+              },
+            ),
+          ]),
+          FakeProviderClientResponse.text('图片已生成。'),
+        ],
+      ),
+      userText: '生成周牧的单人全身图',
+    );
+    final runtime = container.read(
+      aiChatRuntimeProvider(seeded.sessionId).notifier,
+    );
+
+    final outcome = await buildRunner(container).runTurn(
+      '生成周牧的单人全身图',
+      requestId: seeded.requestId,
+      sessionId: seeded.sessionId,
+    );
+    runtime.markRequestIdle(seeded.requestId, notifyOnComplete: false);
+
+    final messages = container
+        .read(aiChatSessionProvider(seeded.sessionId))
+        .messages;
+    expect(outcome.finalText, '图片已生成。');
+    expect(messages.last.effectiveText, '图片已生成。');
+    expect(
+      messages
+          .expand((message) => message.blocks)
+          .whereType<AiToolCallBlock>()
+          .any((block) => block.result?['asset_id'] == 'portrait-asset'),
+      isTrue,
+    );
+  });
+
+  test('corrects a claim made before an image tool fails', () async {
+    final container = buildTestContainer();
+    addTearDown(container.dispose);
+    final dispatcher = FakeAgentToolDispatcher(
+      tools: {
+        'Run': FakeAgentTool(
+          def: const ToolDef(
+            name: 'Run',
+            description: 'Run',
+            inputSchema: {'type': 'object'},
+          ),
+          handler: (_, _) async => {
+            'ok': false,
+            'success': false,
+            'command': 'character generate-photo',
+            'error': 'upstream unavailable',
+          },
+        ),
+      },
+    );
+    final seeded = seedSession(
+      container,
+      sessionId: 'failed-image-claim',
+      agent: FakeAgent.create(
+        toolManager: dispatcher,
+        responses: const [
+          FakeProviderClientResponse.toolCalls([
+            ToolCall(
+              callId: 'failed-photo',
+              toolName: 'Run',
+              arguments: {
+                'command': 'character',
+                'subcommand': 'generate-photo',
+                'options': {'character': 'character_1', 'prompt': '周牧全身照'},
+              },
+            ),
+          ], text: '周牧的全身图已生成。'),
+          FakeProviderClientResponse.text('图片没有生成，请稍后重试。'),
+        ],
+      ),
+      userText: '生成周牧的单人全身图',
+    );
+    final runtime = container.read(
+      aiChatRuntimeProvider(seeded.sessionId).notifier,
+    );
+
+    await buildRunner(container).runTurn(
+      '生成周牧的单人全身图',
+      requestId: seeded.requestId,
+      sessionId: seeded.sessionId,
+    );
+    runtime.markRequestIdle(seeded.requestId, notifyOnComplete: false);
+
+    final messages = container
+        .read(aiChatSessionProvider(seeded.sessionId))
+        .messages;
+    final first = messages.firstWhere(
+      (message) => message.blocks.any((block) => block is AiToolCallBlock),
+    );
+    expect(first.effectiveText, contains('ai.image_no_result'));
+    expect(
+      first.blocks.whereType<AiToolCallBlock>().single.callId,
+      'failed-photo',
+    );
+    expect(messages.last.effectiveText, '图片没有生成，请稍后重试。');
+  });
+
+  test('keeps an honest correction about a previous false claim', () async {
+    final container = buildTestContainer();
+    addTearDown(container.dispose);
+    const response = '我之前误称图片已生成，实际上没有生成。';
+    final seeded = seedSession(
+      container,
+      sessionId: 'image-claim-negation',
+      agent: FakeAgent.create(
+        responses: const [FakeProviderClientResponse.text(response)],
+      ),
+    );
+    final runtime = container.read(
+      aiChatRuntimeProvider(seeded.sessionId).notifier,
+    );
+
+    final outcome = await buildRunner(container).runTurn(
+      '图片在哪里',
+      requestId: seeded.requestId,
+      sessionId: seeded.sessionId,
+    );
+    runtime.markRequestIdle(seeded.requestId, notifyOnComplete: false);
+
+    expect(outcome.finalText, response);
   });
 
   test('rejects a deleted work before configuring chat', () {

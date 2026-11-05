@@ -40,14 +40,22 @@ class EvoLinkImageClient extends ImageClient {
     }
     final channel = validatedChannel(request)!;
     final capabilities = channel.capabilities;
-    final ratio = request.aspectRatio ?? '1:1';
+    // Chat character tools request fixed pixel sizes; EvoLink accepts ratios.
+    final legacyRatio = switch (request.size) {
+      '1024x1024' => '1:1',
+      '864x1536' => '9:16',
+      _ => null,
+    };
+    final ratio = request.aspectRatio ?? legacyRatio ?? '1:1';
     final quality = request.resolution ?? request.quality ?? '2K';
     if (!capabilities.ratios.contains(ratio) ||
         !capabilities.resolutions.contains(quality)) {
       throw invalidImageParameter();
     }
     final expectedSize = capabilities.size(ratio, quality);
-    if (request.size != null && request.size != expectedSize) {
+    if (request.size != null &&
+        request.size != expectedSize &&
+        legacyRatio != ratio) {
       throw invalidImageParameter();
     }
 

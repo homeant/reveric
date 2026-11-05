@@ -146,6 +146,34 @@ void main() {
     expect(uploaded, [_image]);
   });
 
+  test('maps chat character image sizes to EvoLink aspect ratios', () async {
+    for (final (size, ratio) in [('1024x1024', '1:1'), ('864x1536', '9:16')]) {
+      await http.runWithClient(
+        () => AiImageGenerationService(
+          provider,
+          model: _model,
+        ).generateImage('a character portrait', size: size),
+        () => MockClient((request) async {
+          if (request.method == 'POST') {
+            final body = jsonDecode(request.body) as Map<String, dynamic>;
+            expect(body['size'], ratio);
+            expect(body['quality'], '2K');
+            return http.Response(jsonEncode({'id': 'task-$ratio'}), 200);
+          }
+          return http.Response(
+            jsonEncode({
+              'status': 'completed',
+              'result_data': [
+                {'url': _image},
+              ],
+            }),
+            200,
+          );
+        }),
+      );
+    }
+  });
+
   test(
     'keeps task ID when polling fails and resumes without resubmitting',
     () async {
