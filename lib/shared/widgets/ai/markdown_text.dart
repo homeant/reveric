@@ -1,13 +1,15 @@
-// 职责: 渲染 AI Markdown 正文、管理流式选区，并仅允许 HTTP(S) 链接打开系统浏览器。
+// 职责: 渲染 AI Markdown 正文与应用内图片、管理流式选区，并仅允许 HTTP(S) 链接打开系统浏览器。
 // 关联文件:
 //   lib/shared/widgets/stable_selection_area.dart
 //   lib/shared/widgets/ai/chat/chat_message_parts.dart
 //   lib/shared/widgets/ai/council/message_card.dart
 //   lib/shared/widgets/ai/council/summary_card.dart
+//   lib/shared/utils/storage_paths.dart
 //   lib/shared/localization/locale_keys.dart
 //   assets/translations/en/common.json
 //   assets/translations/zh-CN/common.json
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
@@ -16,6 +18,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../localization/app_localization.dart';
 import '../../localization/locale_keys.dart';
 import '../../logger/app_logger.dart';
+import '../../theme/theme.dart';
+import '../../utils/storage_paths.dart';
 import '../stable_selection_area.dart';
 import 'markdown_code_block.dart';
 
@@ -55,6 +59,38 @@ String _normalizeFullwidthDigits(String input) {
   );
 }
 
+Widget _buildMarkdownImage(
+  BuildContext context,
+  String source,
+  double? width,
+  double? height,
+) {
+  ImageProvider provider;
+  if (source.startsWith('file_workspaces/')) {
+    try {
+      provider = FileImage(File(RevericPaths.resolveDatabasePath(source)));
+    } on FormatException {
+      return const SizedBox.shrink();
+    }
+  } else {
+    provider = NetworkImage(source);
+  }
+  final colors = RevericTheme.colorsOf(context);
+  return Image(
+    image: provider,
+    width: width,
+    height: height,
+    fit: BoxFit.contain,
+    errorBuilder: (_, _, _) => Center(
+      child: RevericIcon(
+        RevericIcons.broken_image_outlined,
+        size: 32,
+        color: colors.textSubtle,
+      ),
+    ),
+  );
+}
+
 class AiMarkdownText extends StatelessWidget {
   const AiMarkdownText(
     this.content, {
@@ -84,6 +120,9 @@ class AiMarkdownText extends StatelessWidget {
         maxLines: maxLines,
         overflow: overflow,
         codeBuilder: buildMarkdownCodeBlock,
+        imageBuilder: content.contains('](file_workspaces/')
+            ? _buildMarkdownImage
+            : null,
         onLinkTap: (url, _) => unawaited(_openWebLink(context, url)),
       ),
     );
